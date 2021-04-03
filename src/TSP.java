@@ -21,10 +21,11 @@ class Solution {
     public ArrayList<Edge> Hamiltonian = new ArrayList<Edge>();
     public Set<Integer> D1 = new HashSet<Integer>();
     public Set<Integer> D0 = new HashSet<Integer>();
+    public Unset HamiU;//用却确定Hamiltonian的连通情况
 
     //构造函数
     public Solution() throws IOException {
-        Initialize("data/test1.txt");
+        Initialize("data/edge.txt");
     }
 
     //读取文件，初始化边集和距离矩阵
@@ -86,6 +87,7 @@ class Solution {
 
     //将最小生成树减支至各个结点的度为0,1,2
     public void Cut() {
+        HamiU=new Unset(Degree.length) ;
         for (int i = MST.size() - 1; i >= 0; --i) {
             boolean needcut = false;
             if (Degree[MST.get(i).node1] > 2) {
@@ -99,7 +101,9 @@ class Solution {
                 --Degree[MST.get(i).node2];
             }
             if (!needcut) {
-                Hamiltonian.add(new Edge(MST.get(i)));
+                Edge e=new Edge(MST.get(i));
+                Hamiltonian.add(e);
+                HamiU.Merge(e.node1,e.node2);
             }
         }
         for (int i = 0; i < Degree.length; ++i) {
@@ -111,7 +115,7 @@ class Solution {
     }
 
     //将各个连通分量连成环
-    public void MakeRing() {
+    public void MakeRing() throws IOException {
         //处理独立点
         while (!D0.isEmpty()) {
             int closest = -1;
@@ -124,7 +128,9 @@ class Solution {
                 }
             }
             if (closest != -1) {
-                Hamiltonian.add(new Edge(select, closest, minWeight));
+                Edge e=new Edge(select, closest, minWeight);
+                Hamiltonian.add(e);
+                HamiU.Merge(e.node1,e.node2);
                 D1.add(select);
                 D0.remove(select);
                 if (Degree[closest] == 0) {
@@ -137,19 +143,26 @@ class Solution {
                 ++Degree[closest];
             }
         }
-        //处理度为1的点
+        //处理度为1的点,注意不要和已经相连的点在连，仅仅通过度为1还不足以判断，需要通过并查集
         while (!D1.isEmpty()) {
             int closest = -1;
             double minWeight = MAX_WEIGHT;
             int select = D1.iterator().next();
             for (int i = 0; i < Degree.length; ++i) {
                 if (Degree[i] == 1 && i != select && Matrix[select][i] < minWeight) {
+                    int tmp=closest;
                     closest = i;
-                    minWeight = Matrix[select][i];
+                    if(HamiU.Find(select)!=HamiU.Find(closest)||D1.size()==2) {//注意最后2个度为1的点就不需要并查集来判断了
+                        minWeight = Matrix[select][i];
+                    }else {
+                        closest=tmp;
+                    }
                 }
             }
             if (closest != -1) {
-                Hamiltonian.add(new Edge(select, closest, minWeight));
+                Edge e=new Edge(select, closest, minWeight);
+                Hamiltonian.add(e);
+                HamiU.Merge(e.node1,e.node2);
                 D1.remove(select);
                 D1.remove(closest);
                 ++Degree[select];
@@ -169,20 +182,25 @@ class Solution {
 
     //打印度为0的集合
     public void ShowD0() {
+        System.out.println("Solution.ShowD0");
         for (int num : D0) {
             System.out.println(num);
         }
+        System.out.println();
     }
 
     //打印度为1的结点
     public void ShowD1() {
+        System.out.println("Solution.ShowD1");
         for (int num : D1) {
             System.out.println(num);
         }
+        System.out.println();
     }
 
     //打印距离矩阵
     public void ShowMatrix() {
+        System.out.println("Solution.ShowMatrix");
         for (double[] row : Matrix) {
             for (double w : row) {
                 if (Math.abs(w - MAX_WEIGHT) < 1e-2)
@@ -192,34 +210,46 @@ class Solution {
             }
             System.out.println();
         }
+        System.out.println();
     }
 
     //打印属于哈密顿的边（MakeRing之后）
-    public void ShowHamiltonian() {
+    public void ShowHamiltonian() throws IOException {
+        System.out.println("Solution.ShowHamiltonian");
+        BufferedWriter out = new BufferedWriter(new FileWriter("result.txt"));
         for (Edge e : Hamiltonian) {
             System.out.println(e.node1 + " 到 " + e.node2 + " 的权重为 " + e.weight);
+            out.write(e.node1+"  "+e.node2+"\n");
         }
+        out.close();
+        System.out.println();
     }
 
     //打印边集
     public void ShowEdges() {
+        System.out.println("Solution.ShowEdges");
         for (Edge e : Edges) {
             System.out.println(e.node1 + " 到 " + e.node2 + " 的权重为 " + e.weight);
         }
+        System.out.println();
     }
 
     //打印最小生成树
     public void ShowMST() {
+        System.out.println("Solution.ShowMST");
         for (Edge e : MST) {
             System.out.println(e.node1 + " 到 " + e.node2 + " 的权重为 " + e.weight);
         }
+        System.out.println();
     }
 
     //打印当前各个结点的度
     public void ShowDegree() {
+        System.out.println("Solution.ShowDegree");
         for (int i = 0; i < Degree.length; ++i) {
             System.out.println(i + " 的度为: " + Degree[i]);
         }
+        System.out.println();
     }
 }
 
